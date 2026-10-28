@@ -23,6 +23,14 @@
 
 生成的 APK 位于 `app/build/outputs/apk/debug/app-debug.apk`
 
+## 安装 APK
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+应用包名为 `com.github.uiautomator2`。使用内置的 AdbKeyboard 输入法需要先安装 APK。
+
 ## 启动 Jar 服务
 
 ```bash
@@ -85,6 +93,8 @@ AI 将自动：解析 Java 源码 → 提取所有方法 → 生成 methods.json
 # AdbKeyboard（ATX Keyboard）
 
 APK 内置一个用于文本输入的输入法，安装后在输入法列表中显示为 **ATX Keyboard**，组件名为 `com.github.uiautomator2/.AdbKeyboard`。
+
+> 从旧包 `com.github.uiautomator` 升级时，新旧包是两个独立应用，安装新包不会覆盖旧包。建议卸载旧包（`adb uninstall com.github.uiautomator`），避免输入法列表里出现两个同名的 ATX Keyboard。
 
 ## 启用并切换输入法
 

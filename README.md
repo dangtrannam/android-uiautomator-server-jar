@@ -27,6 +27,14 @@ Method 2:
 
 Now apk file can be found in `app/build/outputs/apk/debug/app-debug.apk`
 
+## Install APK
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+The application ID is `com.github.uiautomator2`. Installing the APK is required to use the bundled AdbKeyboard input method.
+
 ## Launch Jar server
 
 ```bash
@@ -89,6 +97,8 @@ The AI will parse the Java sources → extract every method → generate methods
 # AdbKeyboard (ATX Keyboard)
 
 The APK bundles an input method for text input. After installation it appears in the IME list as **ATX Keyboard**, with the component name `com.github.uiautomator2/.AdbKeyboard`.
+
+> Upgrading from the old `com.github.uiautomator` package? The two packages are separate apps, so installing the new APK does not replace the old one. Uninstall the old app (`adb uninstall com.github.uiautomator`) to avoid duplicate ATX Keyboard entries in the IME list.
 
 ## Enable and switch IME
 
