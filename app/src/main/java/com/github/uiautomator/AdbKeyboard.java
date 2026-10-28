@@ -23,6 +23,10 @@ import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
@@ -167,13 +171,15 @@ public class AdbKeyboard extends InputMethodService {
                      * TEXT=$(echo -n "Hello World" | base64)
                      * adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text ${TEXT:-"SGVsbG8gd29ybGQ="}
                      * 可选参数 interval，单位 ms，控制每个字符之间的输入间隔，默认 0
+                     * text 推荐传 base64；非合法 base64 时按原文处理，因此也可直接传入中文
                      * adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "$TEXT" --ei interval 100
+                     * adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "123你好" --ei interval 100
                      */
                     msgText = intent.getStringExtra("text");
                     if (msgText == null) {
                         return action;
                     }
-                    inputTextBase64(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
+                    inputText(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
                     break;
                 case ADB_KEYBOARD_INPUT_KEYCODE:
                     /* test method
@@ -195,7 +201,7 @@ public class AdbKeyboard extends InputMethodService {
                     }
                     ic.beginBatchEdit();
                     clearText();
-                    inputTextBase64(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
+                    inputText(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
                     ic.endBatchEdit();
                     break;
                 case ADB_KEYBOARD_EDITOR_CODE:
@@ -303,9 +309,24 @@ public class AdbKeyboard extends InputMethodService {
         public void swipeUp() {}
     }
 
-    private void inputTextBase64(String base64text, long intervalMs) {
-        byte[] data = Base64.decode(base64text, Base64.DEFAULT);
-        String text = new String(data, StandardCharsets.UTF_8);
+    /**
+     * text 优先按 base64 解码为 UTF-8；若不是合法 base64 或解码结果不是合法 UTF-8，
+     * 则直接当作原始文本使用，方便命令行直接输入中文。
+     */
+    private static String decodeInputText(String text) {
+        try {
+            byte[] data = Base64.decode(text, Base64.DEFAULT);
+            CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
+            return decoder.decode(ByteBuffer.wrap(data)).toString();
+        } catch (IllegalArgumentException | CharacterCodingException e) {
+            return text;
+        }
+    }
+
+    private void inputText(String textExtra, long intervalMs) {
+        String text = decodeInputText(textExtra);
         final InputConnection ic = getCurrentInputConnection();
         if (ic == null) {
             return;

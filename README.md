@@ -99,12 +99,21 @@ adb shell ime set com.github.uiautomator/.AdbKeyboard
 
 ## Input text via broadcast
 
-The `text` parameter must be base64-encoded UTF-8 text:
+The `text` parameter should be base64-encoded UTF-8 text. Plain text is also accepted: if it is not valid base64 or does not decode to valid UTF-8, it is typed as-is.
 
 ```bash
 TEXT=$(echo -n "Hello World" | base64)
 adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "$TEXT"
 ```
+
+Plain text works too, which is handy for Chinese input:
+
+```bash
+adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "123你好" --ei interval 100
+```
+
+> If the text contains spaces, wrap the whole `am broadcast` command so `adb shell` does not split it:
+> `adb shell "am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text 'hello 世界'"`
 
 The optional `interval` parameter (in ms) controls the delay between characters. The default `0` commits the whole string at once:
 

@@ -95,12 +95,21 @@ adb shell ime set com.github.uiautomator/.AdbKeyboard
 
 ## 通过广播输入文本
 
-`text` 参数需要是 base64 编码的 UTF-8 文本：
+`text` 推荐传 base64 编码的 UTF-8 文本；如果不是合法 base64（或解码后不是合法 UTF-8），会按原始文本直接输入。
 
 ```bash
 TEXT=$(echo -n "Hello World" | base64)
 adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "$TEXT"
 ```
+
+也可以直接传原始文本，中文输入更方便：
+
+```bash
+adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "123你好" --ei interval 100
+```
+
+> 文本中带空格时，需要把整条 `am broadcast` 命令包起来，避免被 `adb shell` 拆成多个参数：
+> `adb shell "am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text 'hello 世界'"`
 
 可选参数 `interval`（单位 ms）控制逐字符输入的间隔，默认 `0` 表示整段一次输入：
 
