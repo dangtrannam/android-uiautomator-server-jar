@@ -11,9 +11,12 @@ import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedTextRequest;
@@ -32,6 +35,9 @@ public class AdbKeyboard extends InputMethodService {
     private Keyboard keyboard;
     private KeyboardView inputView;
 
+    private final Handler inputHandler = new Handler(Looper.getMainLooper());
+    private Runnable pendingInput = null;
+
     public enum KeyboardAction {
         ADB_KEYBOARD_SMART_ENTER,
         ADB_KEYBOARD_INPUT_TEXT,
@@ -46,12 +52,34 @@ public class AdbKeyboard extends InputMethodService {
 
     @Override
     public View onCreateInputView() {
-        inputView = (KeyboardView) getLayoutInflater().inflate(R.layout.input, null);
+        View view = getLayoutInflater().inflate(R.layout.input, null);
+        inputView = view.findViewById(R.id.keyboard);
         keyboard = new Keyboard(this, R.xml.keyboard);
         inputView.setKeyboard(keyboard);
         inputView.setOnKeyboardActionListener(new MyKeyboardActionListener());
 
-        return inputView;
+        // 下滑标题栏也可以隐藏输入法
+        view.findViewById(R.id.keyboard_header).setOnTouchListener(new View.OnTouchListener() {
+            private float startY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = event.getY();
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        float threshold = 16 * getResources().getDisplayMetrics().density;
+                        if (event.getY() - startY > threshold) {
+                            hideInputMethod(AdbKeyboard.this);
+                        }
+                        return true;
+                }
+                return true;
+            }
+        });
+
+        return view;
     }
 
     @Override
@@ -77,6 +105,7 @@ public class AdbKeyboard extends InputMethodService {
     public void onDestroy() {
         super.onDestroy();
         Log.i(TAG, "Input destroyed");
+        cancelPendingInput();
         if (mReceiver != null) {
             try {
                 unregisterReceiver(mReceiver);
@@ -136,18 +165,20 @@ public class AdbKeyboard extends InputMethodService {
                 case ADB_KEYBOARD_INPUT_TEXT:
                     /* test method
                      * TEXT=$(echo -n "Hello World" | base64)
-                     * adb shell am broadcast -a ADB_INPUT_TEXT --es text ${TEXT:-"SGVsbG8gd29ybGQ="}
+                     * adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text ${TEXT:-"SGVsbG8gd29ybGQ="}
+                     * 可选参数 interval，单位 ms，控制每个字符之间的输入间隔，默认 0
+                     * adb shell am broadcast -a ADB_KEYBOARD_INPUT_TEXT --es text "$TEXT" --ei interval 100
                      */
                     msgText = intent.getStringExtra("text");
                     if (msgText == null) {
                         return action;
                     }
-                    inputTextBase64(msgText);
+                    inputTextBase64(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
                     break;
                 case ADB_KEYBOARD_INPUT_KEYCODE:
                     /* test method
                      * Enter code 66
-                     * adb shell am broadcast -a ADB_INPUT_KEYCODE --ei code 66
+                     * adb shell am broadcast -a ADB_KEYBOARD_INPUT_KEYCODE --ei code 66
                      */
                     code = intent.getIntExtra("code", -1);
                     if (code != -1) {
@@ -164,7 +195,7 @@ public class AdbKeyboard extends InputMethodService {
                     }
                     ic.beginBatchEdit();
                     clearText();
-                    inputTextBase64(msgText);
+                    inputTextBase64(msgText, Math.max(0, intent.getIntExtra("interval", 0)));
                     ic.endBatchEdit();
                     break;
                 case ADB_KEYBOARD_EDITOR_CODE:
@@ -264,17 +295,52 @@ public class AdbKeyboard extends InputMethodService {
         public void swipeRight() {}
 
         @Override
-        public void swipeDown() {}
+        public void swipeDown() {
+            hideInputMethod(AdbKeyboard.this);
+        }
 
         @Override
         public void swipeUp() {}
     }
 
-    private void inputTextBase64(String base64text) {
+    private void inputTextBase64(String base64text, long intervalMs) {
         byte[] data = Base64.decode(base64text, Base64.DEFAULT);
         String text = new String(data, StandardCharsets.UTF_8);
-        InputConnection ic = getCurrentInputConnection();
-        ic.commitText(text, 1);
+        final InputConnection ic = getCurrentInputConnection();
+        if (ic == null) {
+            return;
+        }
+        cancelPendingInput();
+        if (intervalMs <= 0 || text.length() <= 1) {
+            ic.commitText(text, 1);
+            return;
+        }
+        final String input = text;
+        pendingInput = new Runnable() {
+            private int index = 0;
+
+            @Override
+            public void run() {
+                if (index >= input.length()) {
+                    return;
+                }
+                int codePoint = input.codePointAt(index);
+                int charCount = Character.charCount(codePoint);
+                ic.commitText(input.substring(index, index + charCount), 1);
+                index += charCount;
+                if (index < input.length()) {
+                    inputHandler.postDelayed(this, intervalMs);
+                }
+            }
+        };
+        inputHandler.post(pendingInput);
+    }
+
+    private void cancelPendingInput() {
+        if (pendingInput != null) {
+            inputHandler.removeCallbacks(pendingInput);
+            pendingInput = null;
+        }
     }
 
     private void clearText() {
