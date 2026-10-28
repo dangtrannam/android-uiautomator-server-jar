@@ -34,7 +34,7 @@ plugins {
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'com.github.uiautomator'
+    namespace 'com.github.uiautomator2'
     compileSdk 35
 
     // version code history
@@ -46,7 +46,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.github.uiautomator"
+        applicationId "com.github.uiautomator2"
         minSdkVersion 21
         targetSdkVersion 35
         versionCode androidGitVersion.code()

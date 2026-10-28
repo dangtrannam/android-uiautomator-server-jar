@@ -84,13 +84,13 @@ AI 将自动：解析 Java 源码 → 提取所有方法 → 生成 methods.json
 
 # AdbKeyboard（ATX Keyboard）
 
-APK 内置一个用于文本输入的输入法，安装后在输入法列表中显示为 **ATX Keyboard**，组件名为 `com.github.uiautomator/.AdbKeyboard`。
+APK 内置一个用于文本输入的输入法，安装后在输入法列表中显示为 **ATX Keyboard**，组件名为 `com.github.uiautomator2/.AdbKeyboard`。
 
 ## 启用并切换输入法
 
 ```bash
-adb shell ime enable com.github.uiautomator/.AdbKeyboard
-adb shell ime set com.github.uiautomator/.AdbKeyboard
+adb shell ime enable com.github.uiautomator2/.AdbKeyboard
+adb shell ime set com.github.uiautomator2/.AdbKeyboard
 ```
 
 ## 通过广播输入文本

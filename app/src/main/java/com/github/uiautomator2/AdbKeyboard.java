@@ -1,4 +1,4 @@
-package com.github.uiautomator;
+package com.github.uiautomator2;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;

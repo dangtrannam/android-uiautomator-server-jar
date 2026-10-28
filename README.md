@@ -88,13 +88,13 @@ The AI will parse the Java sources → extract every method → generate methods
 
 # AdbKeyboard (ATX Keyboard)
 
-The APK bundles an input method for text input. After installation it appears in the IME list as **ATX Keyboard**, with the component name `com.github.uiautomator/.AdbKeyboard`.
+The APK bundles an input method for text input. After installation it appears in the IME list as **ATX Keyboard**, with the component name `com.github.uiautomator2/.AdbKeyboard`.
 
 ## Enable and switch IME
 
 ```bash
-adb shell ime enable com.github.uiautomator/.AdbKeyboard
-adb shell ime set com.github.uiautomator/.AdbKeyboard
+adb shell ime enable com.github.uiautomator2/.AdbKeyboard
+adb shell ime set com.github.uiautomator2/.AdbKeyboard
 ```
 
 ## Input text via broadcast
